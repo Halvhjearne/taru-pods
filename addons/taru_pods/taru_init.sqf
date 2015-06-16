@@ -11,7 +11,7 @@ if(isServer)exitWith{
 		if(_para isKindOf "ParachuteBase")then{
 			_para call EPOCH_server_setVToken;
 		};
-		diag_log format["[HALV_fnc_parapod]: %1",_this];
+//		diag_log format["[HALV_fnc_parapod]: %1",_this];
 	};
 	"HALVPV_PARAPOD" addPublicVariableEventHandler {(_this select 1) call HALV_fnc_parapod};
 };
@@ -53,12 +53,12 @@ if(hasInterface && !isDedicated)then{
 		if(_pos select 2 > 10)then{
 			sleep 2;
 			_pos = getPosATL _pod;
-			_chute = createVehicle ["B_Parachute_02_F", _pos, [], 0, "CAN_COLLIDE"];
+			_chute = createVehicle ["B_Parachute_02_F", _pos, [], 0, "FLY"];
 			HALVPV_PARAPOD = [player,_chute];
 			publicVariableServer "HALVPV_PARAPOD";
 			_chute disableCollisionWith _pod;
 			_chute disableCollisionWith _heli;
-			_chute attachTo [_pod, [0,0,1]];
+			_pod attachTo [_chute, [0,0,1]];
 			waitUntil{isTouchingGround _pod};
 			if(!isNull _chute)then{
 				detach _chute;
@@ -97,11 +97,11 @@ if(hasInterface && !isDedicated)then{
 					_pods = _vehicle nearEntities ["Pod_Heli_Transport_04_base_F",7];
 					if(count _pods > 0)then{
 						_newpod = _pods select 0;
-						_notdisabled = _newpod getVariable ["R3F_LOG_disabled",false];
-						if(_notdisabled)then{
+						_disabled = _newpod getVariable ["R3F_LOG_disabled",false];
+						if(!_disabled)then{
 							if(_taruAttachAction < 0)then{
 								_txt = gettext (configFile >> 'cfgvehicles' >> (typeOf _newpod) >> 'displayName');
-								_taruAttachAction = _vehicle addAction [format["Attach: %1",_txt],{((_this select 3)+[_this select 2])call HALV_attachTarupods;},[_vehicle,_newpod],-1, false, true, "", ""];
+								_taruAttachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\pickup_ca.paa'/> Attach: %1",_txt],{((_this select 3)+[_this select 2])call HALV_attachTarupods;},[_vehicle,_newpod],-1, false, true, "", ""];
 							};
 						}else{
 							_vehicle removeAction _taruAttachAction;
