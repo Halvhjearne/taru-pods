@@ -26,13 +26,13 @@ if(hasInterface && !isDedicated)then{
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_IN.wss", player];
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_IN.wss", _heli];
 		_attribs = switch (typeOf _pod)do{
-			case "Land_Pod_Heli_Transport_04_bench_F":{[[0,0,-1.2],680]};
-			case "Land_Pod_Heli_Transport_04_covered_F":{[[0,0,-0.82],1413]};
-			case "Land_Pod_Heli_Transport_04_medevac_F":{[[0,0,-0.82],1321]};
-			case "Land_Pod_Heli_Transport_04_box_F":{[[0,0,-0.82],1270]};
-			case "Land_Pod_Heli_Transport_04_fuel_F":{[[0,0,-0.82],13311]};
-			case "Land_Pod_Heli_Transport_04_repair_F":{[[0,0,-0.82],1270]};
-			case "Land_Pod_Heli_Transport_04_ammo_F":{[[0,0,-0.82],1270]};
+			case "Land_Pod_Heli_Transport_04_bench_F":{[[0,-1,-1.2],680]};
+			case "Land_Pod_Heli_Transport_04_covered_F":{[[0,-1,-0.82],1413]};
+			case "Land_Pod_Heli_Transport_04_medevac_F":{[[0,-1,-0.82],1321]};
+			case "Land_Pod_Heli_Transport_04_box_F":{[[0,-1,-0.82],1270]};
+			case "Land_Pod_Heli_Transport_04_fuel_F":{[[0,-1,-0.82],13311]};
+			case "Land_Pod_Heli_Transport_04_repair_F":{[[0,-1,-0.82],1270]};
+			case "Land_Pod_Heli_Transport_04_ammo_F":{[[0,-1,-0.82],1270]};
 			default{[[0,-1,-0.82],1270]};
 		};
 		_pod disableCollisionWith _heli;
@@ -53,21 +53,31 @@ if(hasInterface && !isDedicated)then{
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_IN.wss", _heli];
 		detach _pod;
 		_pos = getPosATL _pod;
-		if(_pos select 2 > 10)then{
-			sleep 2;
-			_pos = getPosATL _pod;
-			_chute = createVehicle ["B_Parachute_02_F", _pos, [], 0, "CAN_COLLIDE"];
-			HALVPV_PARAPOD = [player,_chute];
-			publicVariableServer "HALVPV_PARAPOD";
-			_chute disableCollisionWith _pod;
-			_chute disableCollisionWith _heli;
-			_pod attachTo [_chute, [0,0,1]];
-			waitUntil{sleep 1;isTouchingGround _pod};
-			if !(isNull _chute)then{
-				detach _chute;
-				deleteVehicle _chute;
+		switch(true)do{
+			case (_pos select 2 > 25):{
+				sleep 2;
+				_pos = getPosATL _pod;
+				_chute = createVehicle ["B_Parachute_02_F", _pos, [], 0, "CAN_COLLIDE"];
+				HALVPV_PARAPOD = [player,_chute];
+				publicVariableServer "HALVPV_PARAPOD";
+				_chute disableCollisionWith _pod;
+				_chute disableCollisionWith _heli;
+				_pod attachTo [_chute, [0,0,1]];
+				waitUntil{sleep 1;isTouchingGround _pod};
+				if !(isNull _chute)then{
+					detach _chute;
+					deleteVehicle _chute;
+				};
+				_pos = getPos _pod;
 			};
-			_pos = getPos _pod;
+			case (_pos select 2 > 10):{
+				waitUntil{sleep 1;isTouchingGround _pod};
+				if !(isNull _chute)then{
+					detach _chute;
+					deleteVehicle _chute;
+				};
+				_pos = getPos _pod;
+			};
 		};
 		_pos set [2,0];
 		_pod setPos _pos;
@@ -92,24 +102,23 @@ if(hasInterface && !isDedicated)then{
 
 	_taruAttachAction = -1;
 	_tarudetachAction = -1;
+	_vehicle = objNull;
 	_changed = false;
-
+	
 	while{alive player}do{
-		_vehicle = vehicle player;
-		if (!(player isEqualTo _vehicle) && player isEqualTo driver _vehicle)then{
+		if !(player isEqualTo vehicle player)then{
+			_vehicle = vehicle player;
 			_isTaru = _vehicle isKindOf "O_Heli_Transport_04_F";
 			if(_isTaru)then{
 				_currentpod = _vehicle call HALV_fnc_checkattachedpods;
 				if (_currentpod isEqualTo [])then{
-					_vehicle removeAction _tarudetachAction;
-					_tarudetachAction = -1;
 					_pods = (_vehicle nearEntities ["Pod_Heli_Transport_04_base_F",7])-[_vehicle];
 					if(count _pods > 0)then{
 						_newpod = _pods select 0;
 						if (!(_newpod getVariable ["R3F_LOG_disabled",false]) && _vehicle getVariable ["TARUWEIGHTADDED",0] == 0)then{
 							if(_taruAttachAction < 0)then{
 								_txt = gettext (configFile >> 'cfgvehicles' >> (typeOf _newpod) >> 'displayName');
-								_taruAttachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\pickup_ca.paa'/> Attach: %1",_txt],{((_this select 3)+[_this select 2])call HALV_attachTarupods;},[_vehicle,_newpod],-1, true, true, "", ""];
+								_taruAttachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\pickup_ca.paa'/> Attach: %1",_txt],{((_this select 3)+[_this select 2])call HALV_attachTarupods;},[_vehicle,_newpod],-1, true, true, "", "_this isEqualTo driver _target"];
 							};
 						}else{
 							_vehicle removeAction _taruAttachAction;
@@ -124,23 +133,21 @@ if(hasInterface && !isDedicated)then{
 					_taruAttachAction = -1;
 				};
 				if !(_currentpod isEqualTo [])then{
-					_vehicle removeAction _taruAttachAction;
-					_taruAttachAction = -1;
 					_typeOf = typeOf (_currentpod select 0);
 					_txt = gettext (configFile >> 'cfgvehicles' >> _typeOf >> 'displayName');
 					if(_tarudetachAction < 0)then{
 						_ttxt = "<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1";
 						_pos = getPosATL _vehicle;
 						if(_pos select 2 > 10)then{_ttxt = "<img size='1.5'image='\a3\Ui_f\data\map\VehicleIcons\iconparachute_ca.paa'/> Drop: %1";_changed = true;};
-						_tarudetachAction = _vehicle addAction [format[_ttxt,_txt],{((_this select 3)+[_this select 2]) spawn HALV_detachTarupods;},[_vehicle,_currentpod select 0],-1, false, true, "", ""];
+						_tarudetachAction = _vehicle addAction [format[_ttxt,_txt],{((_this select 3)+[_this select 2]) spawn HALV_detachTarupods;},[_vehicle,_currentpod select 0],-1, true, true,"","_this isEqualTo driver _target"];
 					};
 					if(_tarudetachAction > -1)then{
 						_pos = getPosATL _vehicle;
-						if(_pos select 2 < 10 && _changed)then{
+						if(_pos select 2 < 25 && _changed)then{
 							_vehicle setUserActionText [_tarudetachAction,format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1",_txt]];
 							_changed = false;
 						};
-						if(_pos select 2 > 10 && !_changed)then{
+						if(_pos select 2 > 25 && !_changed)then{
 							_vehicle setUserActionText [_tarudetachAction,format["<img size='1.5'image='\a3\Ui_f\data\map\VehicleIcons\iconparachute_ca.paa'/> Drop: %1",_txt]];
 							_changed = true;
 						};
@@ -155,6 +162,7 @@ if(hasInterface && !isDedicated)then{
 				_vehicle removeAction _tarudetachAction;
 				_tarudetachAction = -1;
 			};
+			_lastvehicle = _vehicle;
 		}else{
 			_vehicle removeAction _taruAttachAction;
 			_taruAttachAction = -1;
