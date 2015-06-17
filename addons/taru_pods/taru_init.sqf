@@ -2,8 +2,6 @@
 	Taru Pod's mod script
 	by Halv
 	inspired by XENO Taru Pod Mod
-	
-	Copyright (C) 2015  Halvhjearne > README.md
 */
 
 if(isServer)exitWith{
