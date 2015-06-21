@@ -1,7 +1,22 @@
 /*
-	Taru Pod's mod script
-	by Halv
-	inspired by XENO Taru Pod Mod
+	Taru Pod's mod script by Halv - inspired by XENO Taru Pod Mod
+
+	Copyright (C) 2015  Halvhjearne
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+	Contact : halvhjearne@gmail.com
 */
 
 if(isServer)exitWith{
@@ -40,7 +55,8 @@ if(hasInterface && !isDedicated)then{
 		_taruweight = (weightRTD _heli)select 3;
 		_set = _taruweight + (_attribs select 1);
 		_heli setCustomWeightRTD _set;
-		_heli setVariable ["TARUWEIGHTADDED",_set,true];
+		_mass = ((getMass _heli)+(getMass _pod));
+		_heli setMass _mass;
 		_pod setVariable ["R3F_LOG_disabled",true,true];
 	};
 
@@ -52,6 +68,23 @@ if(hasInterface && !isDedicated)then{
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_IN.wss", player];
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_IN.wss", _heli];
 		detach _pod;
+		_attribs = switch (typeOf _pod)do{
+			case "Land_Pod_Heli_Transport_04_bench_F":{680};
+			case "Land_Pod_Heli_Transport_04_covered_F":{1413};
+			case "Land_Pod_Heli_Transport_04_medevac_F":{1321};
+			case "Land_Pod_Heli_Transport_04_box_F":{1270};
+			case "Land_Pod_Heli_Transport_04_fuel_F":{13311};
+			case "Land_Pod_Heli_Transport_04_repair_F":{1270};
+			case "Land_Pod_Heli_Transport_04_ammo_F":{1270};
+			default{1270};
+		};
+		
+		_taruweight = (weightRTD _heli)select 3;
+		_set = _taruweight - _attribs;
+		_heli setCustomWeightRTD _set;
+		_mass = ((getMass _heli)-(getMass _pod));
+		_heli setMass _mass;
+		
 		_pos = getPosATL _pod;
 		switch(true)do{
 			case (_pos select 2 > 25):{
@@ -82,19 +115,14 @@ if(hasInterface && !isDedicated)then{
 		_pos set [2,0];
 		_pod setPos _pos;
 		_pod enableCollisionWith _heli;
-		_taruweight = (weightRTD _heli)select 3;
-		_addedweight = _heli getVariable ["TARUWEIGHTADDED",0];
-		_set = _taruweight - _addedweight;
-		_heli setCustomWeightRTD _set;
-		_heli setVariable ["TARUWEIGHTADDED",0,true];
 		_pod setVariable ["R3F_LOG_disabled",false,true];
 	};
 
 	HALV_fnc_checkattachedpods = {
-		_currentpod = [];
+		_currentpod = objNull;
 		{
 			if(_x isKindOf "Pod_Heli_Transport_04_base_F")exitWith{
-				_currentpod = [_x];
+				_currentpod = _x;
 			};
 		}forEach (attachedObjects _this);
 		_currentpod
@@ -102,7 +130,7 @@ if(hasInterface && !isDedicated)then{
 
 	_taruAttachAction = -1;
 	_tarudetachAction = -1;
-	_vehicle = objNull;
+	_lastvehicle = objNull;
 	_changed = false;
 	
 	while{alive player}do{
@@ -111,11 +139,11 @@ if(hasInterface && !isDedicated)then{
 			_isTaru = _vehicle isKindOf "O_Heli_Transport_04_F";
 			if(_isTaru)then{
 				_currentpod = _vehicle call HALV_fnc_checkattachedpods;
-				if (_currentpod isEqualTo [])then{
-					_pods = (_vehicle nearEntities ["Pod_Heli_Transport_04_base_F",7])-[_vehicle];
+				if (isNull _currentpod)then{
+					_pods = (_vehicle nearEntities ["Pod_Heli_Transport_04_base_F",5.5])-[_vehicle];
 					if(count _pods > 0)then{
 						_newpod = _pods select 0;
-						if (!(_newpod getVariable ["R3F_LOG_disabled",false]) && _vehicle getVariable ["TARUWEIGHTADDED",0] == 0)then{
+						if !(_newpod getVariable "R3F_LOG_disabled")then{
 							if(_taruAttachAction < 0)then{
 								_txt = gettext (configFile >> 'cfgvehicles' >> (typeOf _newpod) >> 'displayName');
 								_taruAttachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\pickup_ca.paa'/> Attach: %1",_txt],{((_this select 3)+[_this select 2])call HALV_attachTarupods;},[_vehicle,_newpod],-1, true, true, "", "_this isEqualTo driver _target"];
@@ -132,14 +160,13 @@ if(hasInterface && !isDedicated)then{
 					_vehicle removeAction _taruAttachAction;
 					_taruAttachAction = -1;
 				};
-				if !(_currentpod isEqualTo [])then{
-					_typeOf = typeOf (_currentpod select 0);
-					_txt = gettext (configFile >> 'cfgvehicles' >> _typeOf >> 'displayName');
+				if !(isNull _currentpod)then{
+					_txt = gettext (configFile >> 'cfgvehicles' >> (typeOf _currentpod) >> 'displayName');
 					if(_tarudetachAction < 0)then{
 						_ttxt = "<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1";
 						_pos = getPosATL _vehicle;
 						if(_pos select 2 > 10)then{_ttxt = "<img size='1.5'image='\a3\Ui_f\data\map\VehicleIcons\iconparachute_ca.paa'/> Drop: %1";_changed = true;};
-						_tarudetachAction = _vehicle addAction [format[_ttxt,_txt],{((_this select 3)+[_this select 2]) spawn HALV_detachTarupods;},[_vehicle,_currentpod select 0],-1, true, true,"","_this isEqualTo driver _target"];
+						_tarudetachAction = _vehicle addAction [format[_ttxt,_txt],{((_this select 3)+[_this select 2]) spawn HALV_detachTarupods;},[_vehicle,_currentpod],-1, true, true,"","_this isEqualTo driver _target"];
 					};
 					if(_tarudetachAction > -1)then{
 						_pos = getPosATL _vehicle;
@@ -164,9 +191,9 @@ if(hasInterface && !isDedicated)then{
 			};
 			_lastvehicle = _vehicle;
 		}else{
-			_vehicle removeAction _taruAttachAction;
+			_lastvehicle removeAction _taruAttachAction;
 			_taruAttachAction = -1;
-			_vehicle removeAction _tarudetachAction;
+			_lastvehicle removeAction _tarudetachAction;
 			_tarudetachAction = -1;
 		};
 		sleep 1;
