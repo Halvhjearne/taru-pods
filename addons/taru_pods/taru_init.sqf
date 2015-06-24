@@ -22,8 +22,9 @@
 if(isServer)exitWith{
 	if(!isNil "HALV_fnc_parapod")exitWith{};
 	HALV_fnc_parapod = {
+		_player = _this select 0;
 		_para = _this select 1;
-		if(_para isKindOf "ParachuteBase")then{
+		if(!isNull (_player) && (_para isKindOf "ParachuteBase" || _para isKindOf "Pod_Heli_Transport_04_base_F"))then{
 			_para call EPOCH_server_setVToken;
 		};
 //		diag_log format["[HALV_fnc_parapod]: %1",_this];
@@ -39,7 +40,9 @@ if(hasInterface && !isDedicated)then{
 		if !(isTouchingGround _heli)exitWith{titleText ["Need to be touching ground to attach a pod ...","PLAIN DOWN"];};
 		_heli removeAction _action;
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_IN.wss", player];
+		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_OUT.wss", player];
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_IN.wss", _heli];
+		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_OUT.wss", _heli];
 		_attribs = switch (typeOf _pod)do{
 			case "Land_Pod_Heli_Transport_04_bench_F":{[[0,-1,-1.2],680]};
 			case "Land_Pod_Heli_Transport_04_covered_F":{[[0,-1,-0.82],1413]};
@@ -50,6 +53,7 @@ if(hasInterface && !isDedicated)then{
 			case "Land_Pod_Heli_Transport_04_ammo_F":{[[0,-1,-0.82],1270]};
 			default{[[0,-1,-0.82],1270]};
 		};
+		_pod enableRopeAttach false;
 		_pod disableCollisionWith _heli;
 		_pod attachTo [_heli,(_attribs select 0)];
 		_taruweight = (weightRTD _heli)select 3;
@@ -66,7 +70,9 @@ if(hasInterface && !isDedicated)then{
 		_action = _this select 2;
 		_heli removeAction _action;
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_IN.wss", player];
+		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_OUT.wss", player];
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_IN.wss", _heli];
+		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_OUT.wss", _heli];
 		detach _pod;
 		_attribs = switch (typeOf _pod)do{
 			case "Land_Pod_Heli_Transport_04_bench_F":{680};
@@ -78,56 +84,68 @@ if(hasInterface && !isDedicated)then{
 			case "Land_Pod_Heli_Transport_04_ammo_F":{1270};
 			default{1270};
 		};
-		
 		_taruweight = (weightRTD _heli)select 3;
 		_set = _taruweight - _attribs;
 		_heli setCustomWeightRTD _set;
 		_mass = ((getMass _heli)-(getMass _pod));
 		_heli setMass _mass;
-		
-		_pos = getPosATL _pod;
-		switch(true)do{
-			case (_pos select 2 > 25):{
-				sleep 2;
-				_pos = getPosATL _pod;
-				_chute = createVehicle ["B_Parachute_02_F", _pos, [], 0, "CAN_COLLIDE"];
-				HALVPV_PARAPOD = [player,_chute];
-				publicVariableServer "HALVPV_PARAPOD";
-				_chute disableCollisionWith _pod;
-				_chute disableCollisionWith _heli;
-				_pod attachTo [_chute, [0,0,1]];
-				waitUntil{sleep 1;isTouchingGround _pod};
-				if !(isNull _chute)then{
-					detach _chute;
-					deleteVehicle _chute;
-				};
-				_pos = getPos _pod;
-			};
-			case (_pos select 2 > 10):{
-				waitUntil{sleep 1;isTouchingGround _pod};
-				if !(isNull _chute)then{
-					detach _chute;
-					deleteVehicle _chute;
-				};
-				_pos = getPos _pod;
-			};
-		};
-		_pos set [2,0];
-		_pod setPos _pos;
-		_pod enableCollisionWith _heli;
 		_pod setVariable ["R3F_LOG_disabled",false,true];
+		_pod enableRopeAttach true;
+		_pos = getPosATL _pod;
+		sleep 2;
+		_pod enableCollisionWith _heli;
+		if(_pos select 2 > 25)then{
+			_pos = getPosATL _pod;
+			_chute = createVehicle ["B_Parachute_02_F", _pos, [], 0, "CAN_COLLIDE"];
+			HALVPV_PARAPOD = [player,_chute];
+			publicVariableServer "HALVPV_PARAPOD";
+			_chute disableCollisionWith _pod;
+			_chute disableCollisionWith _heli;
+			_pod attachTo [_chute,[0,0,0.6]];
+			_dt = diag_tickTime;
+			waitUntil{sleep 1;(isTouchingGround _pod || diag_tickTime - _dt > 150)};
+			if !(isNull _chute)then{
+				detach _chute;
+				deleteVehicle _chute;
+			};
+			_pos = getPos _pod;
+			_pos set [2,0];
+			_pod setPos _pos;
+		};
 	};
 
 	HALV_fnc_checkattachedpods = {
 		_currentpod = objNull;
 		{
-			if(_x isKindOf "Pod_Heli_Transport_04_base_F")exitWith{
+			if(_x isKindOf "Pod_Heli_Transport_04_base_F" && isNull(_x getVariable "R3F_LOG_est_transporte_par") && isNull(_x getVariable "R3F_LOG_est_deplace_par"))exitWith{
 				_currentpod = _x;
 			};
 		}forEach (attachedObjects _this);
 		_currentpod
 	};
 
+	_fnc_checkallow_tow = {
+		_vehicle = _this;
+		_allowedTow = false;
+		_plots = _vehicle nearObjects ["PlotPole_EPOCH",150];
+		_isAdmin = getPlayerUID player in TheHALV_HIGH__list;
+		if(count _plots > 0)then{
+			_thePlot = _plots select 0;
+			_isInPlot = (_thePlot getVariable ["BUILD_OWNER", "-1"]) in [getPlayerUID player, Epoch_my_GroupUID];
+			if (_isInPlot || _isAdmin)then{
+				_allowedTow = true;
+			};
+		}else{
+			_allowedTow = true;
+		};
+		if !(isNull (getSlingLoad _vehicle))then{
+			if(locked (getSlingLoad _vehicle) > 1 && !_isAdmin)then{
+				_allowedTow = false;
+			};
+		};
+		_allowedTow
+	};
+	
 	_taruAttachAction = -1;
 	_tarudetachAction = -1;
 	_lastvehicle = objNull;
@@ -143,10 +161,10 @@ if(hasInterface && !isDedicated)then{
 					_pods = (_vehicle nearEntities ["Pod_Heli_Transport_04_base_F",5.5])-[_vehicle];
 					if(count _pods > 0)then{
 						_newpod = _pods select 0;
-						if !(_newpod getVariable "R3F_LOG_disabled")then{
+						if (!(_newpod getVariable "R3F_LOG_disabled") && isNull(_vehicle getVariable "R3F_LOG_heliporte"))then{
 							if(_taruAttachAction < 0)then{
-								_txt = gettext (configFile >> 'cfgvehicles' >> (typeOf _newpod) >> 'displayName');
-								_taruAttachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\pickup_ca.paa'/> Attach: %1",_txt],{((_this select 3)+[_this select 2])call HALV_attachTarupods;},[_vehicle,_newpod],-1, true, true, "", "_this isEqualTo driver _target"];
+								_txt = gettext(configFile >> 'cfgvehicles' >> (typeOf _newpod) >> 'displayName');
+								_taruAttachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\pickup_ca.paa'/> Attach: %1",_txt],{((_this select 3)+[_this select 2])call HALV_attachTarupods;},[_vehicle,_newpod],-1, true, true, "User5", "_this isEqualTo driver _target"];
 							};
 						}else{
 							_vehicle removeAction _taruAttachAction;
@@ -160,16 +178,14 @@ if(hasInterface && !isDedicated)then{
 					_vehicle removeAction _taruAttachAction;
 					_taruAttachAction = -1;
 				};
-				if !(isNull _currentpod)then{
+				if (!(isNull _currentpod) && isNull(getSlingLoad _vehicle) && isNull(_vehicle getVariable "R3F_LOG_heliporte"))then{
 					_txt = gettext (configFile >> 'cfgvehicles' >> (typeOf _currentpod) >> 'displayName');
 					if(_tarudetachAction < 0)then{
-						_ttxt = "<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1";
-						_pos = getPosATL _vehicle;
-						if(_pos select 2 > 10)then{_ttxt = "<img size='1.5'image='\a3\Ui_f\data\map\VehicleIcons\iconparachute_ca.paa'/> Drop: %1";_changed = true;};
-						_tarudetachAction = _vehicle addAction [format[_ttxt,_txt],{((_this select 3)+[_this select 2]) spawn HALV_detachTarupods;},[_vehicle,_currentpod],-1, true, true,"","_this isEqualTo driver _target"];
+						_tarudetachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1",_txt],{((_this select 3)+[_this select 2]) spawn HALV_detachTarupods;},[_vehicle,_currentpod],-1, true, true,"User5","_this isEqualTo driver _target"];
 					};
 					if(_tarudetachAction > -1)then{
 						_pos = getPosATL _vehicle;
+						if(surfaceIsWater _pos)then{_pos = getPosATL _vehicle;};
 						if(_pos select 2 < 25 && _changed)then{
 							_vehicle setUserActionText [_tarudetachAction,format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1",_txt]];
 							_changed = false;
@@ -188,6 +204,11 @@ if(hasInterface && !isDedicated)then{
 				_taruAttachAction = -1;
 				_vehicle removeAction _tarudetachAction;
 				_tarudetachAction = -1;
+			};
+			if !((ropes _vehicle) isEqualTo [])then{
+				if !(_vehicle call _fnc_checkallow_tow)then{
+					{ropeDestroy _x}forEach (ropes _vehicle);
+				};
 			};
 			_lastvehicle = _vehicle;
 		}else{
