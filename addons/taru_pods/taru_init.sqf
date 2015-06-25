@@ -20,15 +20,6 @@
 */
 
 if(isServer)exitWith{
-	if(!isNil "HALV_fnc_parapod")exitWith{};
-	HALV_fnc_parapod = {
-		_player = _this select 0;
-		_para = _this select 1;
-		if(!isNull (_player) && (_para isKindOf "ParachuteBase" || _para isKindOf "Pod_Heli_Transport_04_base_F"))then{
-			_para call EPOCH_server_setVToken;
-		};
-//		diag_log format["[HALV_fnc_parapod]: %1",_this];
-	};
 	"HALVPV_PARAPOD" addPublicVariableEventHandler {(_this select 1) call HALV_fnc_parapod};
 };
 
