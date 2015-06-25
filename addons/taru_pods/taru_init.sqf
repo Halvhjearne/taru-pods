@@ -53,7 +53,6 @@ if(hasInterface && !isDedicated)then{
 			case "Land_Pod_Heli_Transport_04_ammo_F":{[[0,-1,-0.82],1270]};
 			default{[[0,-1,-0.82],1270]};
 		};
-		_pod enableRopeAttach false;
 		_pod disableCollisionWith _heli;
 		_pod attachTo [_heli,(_attribs select 0)];
 		_taruweight = (weightRTD _heli)select 3;
@@ -62,6 +61,7 @@ if(hasInterface && !isDedicated)then{
 		_mass = ((getMass _heli)+(getMass _pod));
 		_heli setMass _mass;
 		_pod setVariable ["R3F_LOG_disabled",true,true];
+		_pod enableRopeAttach false;
 	};
 
 	HALV_detachTarupods = {
