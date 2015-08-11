@@ -223,11 +223,13 @@ if(hasInterface && !isDedicated)then{
 				_vehicle removeAction _tarudetachAction;
 				_tarudetachAction = -1;
 			};
+/*
 			if !((ropes _vehicle) isEqualTo [])then{
 				if !(_vehicle call _fnc_checkallow_tow)then{
 					{ropeDestroy _x}forEach (ropes _vehicle);
 				};
 			};
+*/
 			_lastvehicle = _vehicle;
 		}else{
 			_lastvehicle removeAction _taruAttachAction;
