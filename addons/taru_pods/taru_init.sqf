@@ -61,11 +61,11 @@ if(hasInterface && !isDedicated)then{
 		_heli setMass _mass;
 		_pod setVariable ["R3F_LOG_disabled",true,true];
 		_pod enableRopeAttach false;
+//workaround for ropes not being disabled with above command before ropes has been attached once
 		if(ropeAttachEnabled _pod)then{
 			[_heli,_pod]spawn{
 				_heli = _this select 0;
 				_pod = _this select 1;
-			//workaround for ropes not being disabled with below command before ropes has been attached once
 				_heli setSlingLoad _pod;
 				waitUntil{!isNull (getSlingLoad _heli)};
 				sleep 2;
@@ -136,7 +136,7 @@ if(hasInterface && !isDedicated)then{
 		}forEach (attachedObjects _this);
 		_currentpod
 	};
-
+/*
 	_fnc_checkallow_tow = {
 		_vehicle = _this;
 		_allowedTow = false;
@@ -158,7 +158,7 @@ if(hasInterface && !isDedicated)then{
 		};
 		_allowedTow
 	};
-	
+*/
 	_taruAttachAction = -1;
 	_tarudetachAction = -1;
 	_slingLoadAction = -1;
