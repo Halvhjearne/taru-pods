@@ -43,13 +43,13 @@ if(hasInterface && !isDedicated)then{
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_IN.wss", _heli];
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_OUT.wss", _heli];
 		_attribs = switch (typeOf _pod)do{
-			case "Land_Pod_Heli_Transport_04_bench_F":{[[0,-1,-1.2],680]};
+			case "Land_Pod_Heli_Transport_04_bench_F":{[[0,0,-1.2],680]};
 			case "Land_Pod_Heli_Transport_04_covered_F":{[[0,-1,-0.82],1413]};
-			case "Land_Pod_Heli_Transport_04_medevac_F":{[[0,-1,-0.82],1321]};
-			case "Land_Pod_Heli_Transport_04_box_F":{[[0,-1,-0.82],1270]};
-			case "Land_Pod_Heli_Transport_04_fuel_F":{[[0,-1,-0.82],13311]};
-			case "Land_Pod_Heli_Transport_04_repair_F":{[[0,-1,-0.82],1270]};
-			case "Land_Pod_Heli_Transport_04_ammo_F":{[[0,-1,-0.82],1270]};
+			case "Land_Pod_Heli_Transport_04_medevac_F":{[[-0.15,-1.08,-0.87],1321]};
+			case "Land_Pod_Heli_Transport_04_box_F":{[[-0.1,-1.08,-1.07],1270]};
+			case "Land_Pod_Heli_Transport_04_fuel_F":{[[-0.025,-0.5,-1.22],13311]};
+			case "Land_Pod_Heli_Transport_04_repair_F":{[[-0.1,-1.08,-1.07],1270]};
+			case "Land_Pod_Heli_Transport_04_ammo_F":{[[-0.1,-1.08,-1.07],1270]};
 			default{[[0,-1,-0.82],1270]};
 		};
 		_pod disableCollisionWith _heli;
