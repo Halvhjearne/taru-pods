@@ -136,29 +136,7 @@ if(hasInterface && !isDedicated)then{
 		}forEach (attachedObjects _this);
 		_currentpod
 	};
-/*
-	_fnc_checkallow_tow = {
-		_vehicle = _this;
-		_allowedTow = false;
-		_plots = _vehicle nearObjects ["PlotPole_EPOCH",100];
-		_isAdmin = getPlayerUID player in [];
-		if(count _plots > 0)then{
-			_thePlot = _plots select 0;
-			_isInPlot = (_thePlot getVariable ["BUILD_OWNER", "-1"]) in [getPlayerUID player, Epoch_my_GroupUID];
-			if (_isInPlot || _isAdmin)then{
-				_allowedTow = true;
-			};
-		}else{
-			_allowedTow = true;
-		};
-		if !(isNull (getSlingLoad _vehicle))then{
-			if(locked (getSlingLoad _vehicle) > 1 && !_isAdmin)then{
-				_allowedTow = false;
-			};
-		};
-		_allowedTow
-	};
-*/
+
 	_taruAttachAction = -1;
 	_tarudetachAction = -1;
 	_slingLoadAction = -1;
@@ -178,6 +156,9 @@ if(hasInterface && !isDedicated)then{
 					_pods = (_vehicle nearEntities ["Pod_Heli_Transport_04_base_F",5.5])-[_vehicle];
 					if(count _pods > 0)then{
 						_newpod = _pods select 0;
+						if(isNil {_newpod getVariable "R3F_LOG_disabled"})then {
+							_newpod setVariable ["R3F_LOG_disabled", false];
+						};
 						_disabled = _newpod getVariable ["R3F_LOG_disabled",true];
 						if (!_disabled && isNull _R3F_LOG_heliporte)then{
 							if(_taruAttachAction < 0)then{
@@ -223,13 +204,7 @@ if(hasInterface && !isDedicated)then{
 				_vehicle removeAction _tarudetachAction;
 				_tarudetachAction = -1;
 			};
-/*
-			if !((ropes _vehicle) isEqualTo [])then{
-				if !(_vehicle call _fnc_checkallow_tow)then{
-					{ropeDestroy _x}forEach (ropes _vehicle);
-				};
-			};
-*/
+
 			_lastvehicle = _vehicle;
 		}else{
 			_lastvehicle removeAction _taruAttachAction;
