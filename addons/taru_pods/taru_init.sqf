@@ -20,22 +20,36 @@
 */
 
 if(isServer)exitWith{
-	HALV_fnc_parapod = compileFinal "
-		_player = _this select 0;
-		_para = _this select 1;
-		if(!(isNull _player) && (_para isKindOf 'ParachuteBase' || _para isKindOf 'Pod_Heli_Transport_04_base_F'))then{
-			_para call EPOCH_server_setVToken;
+	compileFinal "
+		HALV_fnc_parapod = {
+			_player = _this select 0;
+			_para = _this select 1;
+			if(!(isNull _player) && (_para isKindOf 'ParachuteBase' || _para isKindOf 'Pod_Heli_Transport_04_base_F'))then{
+				_para call EPOCH_server_setVToken;
+			};
 		};
+		HALV_fnc_savepod = {
+			_player = _this select 0;
+			_pod = _this select 1;
+			if (!(isNull _pod) && !(isNull _player)then{
+				if((getPosATL _pod)select 2 > 3)then{
+					waitUntil{_pod getVariable ['HALV_PODDOWN',0] != 0};
+					_pod setVariable ['HALV_PODDOWN',0,true];
+				};
+				diag_log str['Saving pod position',_player,_pod,getPosATL _pod];
+				_pod call EPOCH_server_save_vehicle;
+			};
+		};
+		'HALVPV_PARAPOD' addPublicVariableEventHandler {(_this select 1) call HALV_fnc_parapod};
+		'HALVPV_SAVEPOD' addPublicVariableEventHandler {(_this select 1) spawn HALV_fnc_savepod};
 	";
-	"HALVPV_PARAPOD" addPublicVariableEventHandler {(_this select 1) call HALV_fnc_parapod};
-//		diag_log format["[HALV_fnc_parapod]: %1",_this];
 };
 
 if(hasInterface && !isDedicated)then{
 	HALV_attachTarupods = {
 		_heli = _this select 0;
-		_pod = _this select 1;
 		_action = _this select 2;
+		_pod = _this select 3;
 		if !(isTouchingGround _heli)exitWith{titleText ["Need to be touching ground to attach a pod ...","PLAIN DOWN"];};
 		_heli removeAction _action;
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_up_IN.wss", player];
@@ -50,7 +64,7 @@ if(hasInterface && !isDedicated)then{
 			case "Land_Pod_Heli_Transport_04_fuel_F":{[[-0.025,-0.5,-1.22],13311]};
 			case "Land_Pod_Heli_Transport_04_repair_F":{[[-0.1,-1.08,-1.07],1270]};
 			case "Land_Pod_Heli_Transport_04_ammo_F":{[[-0.1,-1.08,-1.07],1270]};
-			default{[[0,-1,-0.82],1270]};
+			default{[[-0.1,-1.08,-1.07],1270]};
 		};
 		_pod disableCollisionWith _heli;
 		_pod attachTo [_heli,(_attribs select 0)];
@@ -77,8 +91,8 @@ if(hasInterface && !isDedicated)then{
 
 	HALV_detachTarupods = {
 		_heli = _this select 0;
-		_pod = _this select 1;
 		_action = _this select 2;
+		_pod = _this select 3;
 		_heli removeAction _action;
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_IN.wss", player];
 		playSound3D ["A3\Sounds_F\vehicles\air\Heli_Transport_01\gear_down_OUT.wss", player];
@@ -105,6 +119,8 @@ if(hasInterface && !isDedicated)then{
 		_pos = getPosATL _pod;
 		sleep 2;
 		_pod enableCollisionWith _heli;
+		HALVPV_SAVEPOD = [player,_pod];
+		publicVariableServer "HALVPV_SAVEPOD";
 		if(_pos select 2 > 25)then{
 			_pos = getPosATL _pod;
 			_chute = createVehicle ["B_Parachute_02_F", _pos, [], 0, "CAN_COLLIDE"];
@@ -122,6 +138,7 @@ if(hasInterface && !isDedicated)then{
 			_pos = getPos _pod;
 			_pos set [2,0];
 			_pod setPos _pos;
+			_pod setVariable ["HALV_PODDOWN",1,true];
 		};
 	};
 
@@ -163,7 +180,7 @@ if(hasInterface && !isDedicated)then{
 						if (!_disabled && isNull _R3F_LOG_heliporte)then{
 							if(_taruAttachAction < 0)then{
 								_txt = gettext(configFile >> 'cfgvehicles' >> (typeOf _newpod) >> 'displayName');
-								_taruAttachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\pickup_ca.paa'/> Attach: %1",_txt],{[_this select 0,_this select 3,_this select 2]call HALV_attachTarupods;},_newpod,-1, true, true, "User5", "player isEqualTo driver _target"];
+								_taruAttachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\pickup_ca.paa'/> Attach: %1",_txt],{_this call HALV_attachTarupods;},_newpod,-1, true, true, "User5", "player isEqualTo driver _target"];
 							};
 						}else{
 							_vehicle removeAction _taruAttachAction;
@@ -180,7 +197,7 @@ if(hasInterface && !isDedicated)then{
 				if (!(isNull _currentpod) && isNull(getSlingLoad _vehicle) && isNull _R3F_LOG_heliporte)then{
 					_txt = gettext (configFile >> 'cfgvehicles' >> (typeOf _currentpod) >> 'displayName');
 					if(_tarudetachAction < 0)then{
-						_tarudetachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1",_txt],{[_this select 0,_this select 3,_this select 2] spawn HALV_detachTarupods;},_currentpod,-1, true, true,"User5","player isEqualTo driver _target"];
+						_tarudetachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1",_txt],{_this spawn HALV_detachTarupods;},_currentpod,-1, true, true,"User5","player isEqualTo driver _target"];
 					};
 					if(_tarudetachAction > -1)then{
 						_pos = getPosATL _vehicle;
@@ -217,12 +234,17 @@ if(hasInterface && !isDedicated)then{
 		_ct = cursorTarget;
 		if !(isNull _ct)then{
 			_isTarupod = _ct isKindOf "Pod_Heli_Transport_04_base_F";
-			if(_isTarupod)then{
+			_isHuronpod = _ct isKindOf "Slingload_base_F";
+			if(_isTarupod || _isHuronpod)then{
 				_pid = getPlayerUID player;
 				_podowner = _ct getVariable ["HALV_PODOWNER","0"];
-				if(locked _ct in [0,1] && !(_podowner in [Epoch_my_GroupUID,_pid]))then{
+				if(_isHuronpod && !(_podowner in [Epoch_my_GroupUID,_pid]) || _isTarupod && (locked _ct in [0,1] && !(_podowner in [Epoch_my_GroupUID,_pid])))then{
 					if(_claimaction < 0)then{
 						_txt = gettext(configFile >> 'cfgvehicles' >> (typeOf _ct) >> 'displayName');
+						_condition = "player distance _target < 5";
+						if(_isHuronpod)then{
+							_condition = "player distance _target < 5 && locked _target in [0,1]";
+						};
 						_claimaction = _ct addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\VehicleIcons\iconmanmedic_ca.paa'/> <t color='#0096ff'>Claim %1</t>",_txt],
 						{
 							_obj= _this select 0;
@@ -230,11 +252,13 @@ if(hasInterface && !isDedicated)then{
 							_obj removeAction _id;
 							_pid = getPlayerUID player;
 							_newowner = _pid;
-							if !(Epoch_my_GroupUID isEqualTo "")then{
+							if (Epoch_my_GroupUID != "")then{
 								_newowner = Epoch_my_GroupUID;
 							};
 							_obj setVariable ["HALV_PODOWNER",_newowner,true];
-						}, "",1, true, true, "","player distance _target < 5 && locked _target in [0,1]"];
+							HALVPV_SAVEPOD = [player,_obj];
+							publicVariableServer "HALVPV_SAVEPOD";
+						}, "",1, true, true, "",_condition];
 					};
 				}else{
 					_ct removeAction _claimaction;
