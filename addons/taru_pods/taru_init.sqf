@@ -31,13 +31,15 @@ if(isServer)exitWith{
 		HALV_fnc_savepod = {
 			_player = _this select 0;
 			_pod = _this select 1;
-			if (!(isNull _pod) && !(isNull _player)then{
-				if((getPosATL _pod)select 2 > 3)then{
-					waitUntil{_pod getVariable ['HALV_PODDOWN',0] != 0};
-					_pod setVariable ['HALV_PODDOWN',0,true];
+				if (!(isNull _pod) && !(isNull _player)then{
+					if(_pod isKindOf 'Pod_Heli_Transport_04_base_F')then{
+					if((getPosATL _pod)select 2 > 3)then{
+						waitUntil{_pod getVariable ['HALV_PODDOWN',0] != 0};
+						_pod setVariable ['HALV_PODDOWN',0,true];
+					};
+					diag_log str['Saving pod position',_player,_pod,getPosATL _pod];
+					_pod call EPOCH_server_save_vehicle;
 				};
-				diag_log str['Saving pod position',_player,_pod,getPosATL _pod];
-				_pod call EPOCH_server_save_vehicle;
 			};
 		};
 		'HALVPV_PARAPOD' addPublicVariableEventHandler {(_this select 1) call HALV_fnc_parapod};
