@@ -20,31 +20,32 @@
 */
 
 if(isServer)exitWith{
-	compileFinal "
+//	compileFinal "
 		HALV_fnc_parapod = {
 			_player = _this select 0;
 			_para = _this select 1;
-			if(!(isNull _player) && (_para isKindOf 'ParachuteBase' || _para isKindOf 'Pod_Heli_Transport_04_base_F'))then{
-				_para call EPOCH_server_setVToken;
+			if(!isNull _player && !isNull _para)then{
+				if(_para isKindOf 'ParachuteBase' || _para isKindOf 'Pod_Heli_Transport_04_base_F')then{
+					_para call EPOCH_server_setVToken;
+				};
 			};
 		};
 		HALV_fnc_savepod = {
 			_player = _this select 0;
 			_pod = _this select 1;
-				if (!(isNull _pod) && !(isNull _player))then{
-					if(_pod isKindOf 'Pod_Heli_Transport_04_base_F')then{
-					if((getPosATL _pod)select 2 > 3)then{
-						waitUntil{_pod getVariable ['HALV_PODDOWN',0] != 0};
-						_pod setVariable ['HALV_PODDOWN',0,true];
+			if (!isNull _pod && !isNull _player)then{
+				if(_pod isKindOf 'Pod_Heli_Transport_04_base_F' && _pod getVariable ['VEHICLE_SLOT','ABORT'] != 'ABORT')then{
+					if((getPosATL _pod)select 2 > 2)then{
+						waitUntil{sleep 1;(isTouchingGround _pod || (getPosATL _pod)select 2 < 2)};
 					};
-					diag_log str['Saving pod position',_player,_pod,getPosATL _pod];
+					diag_log str['Saving pod position (landed)',_player,_pod,getPosATL _pod];
 					_pod call EPOCH_server_save_vehicle;
 				};
 			};
 		};
 		'HALVPV_PARAPOD' addPublicVariableEventHandler {(_this select 1) call HALV_fnc_parapod};
 		'HALVPV_SAVEPOD' addPublicVariableEventHandler {(_this select 1) spawn HALV_fnc_savepod};
-	";
+//	";
 };
 
 if(hasInterface && !isDedicated)then{
@@ -140,7 +141,6 @@ if(hasInterface && !isDedicated)then{
 			_pos = getPos _pod;
 			_pos set [2,0];
 			_pod setPos _pos;
-			_pod setVariable ["HALV_PODDOWN",1,true];
 		};
 	};
 
@@ -196,7 +196,7 @@ if(hasInterface && !isDedicated)then{
 					_vehicle removeAction _taruAttachAction;
 					_taruAttachAction = -1;
 				};
-				if (!(isNull _currentpod) && isNull(getSlingLoad _vehicle) && isNull _R3F_LOG_heliporte)then{
+				if (!isNull _currentpod && isNull(getSlingLoad _vehicle) && isNull _R3F_LOG_heliporte)then{
 					_txt = gettext (configFile >> 'cfgvehicles' >> (typeOf _currentpod) >> 'displayName');
 					if(_tarudetachAction < 0)then{
 						_tarudetachAction = _vehicle addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\Markers\Military\end_ca.paa'/> Drop: %1",_txt],{_this spawn HALV_detachTarupods;},_currentpod,-1, true, true,"User5","player isEqualTo driver _target"];
@@ -240,12 +240,12 @@ if(hasInterface && !isDedicated)then{
 			if(_isTarupod || _isHuronpod)then{
 				_pid = getPlayerUID player;
 				_podowner = _ct getVariable ["HALV_PODOWNER","0"];
-				if(_isHuronpod && !(_podowner in [Epoch_my_GroupUID,_pid]) || _isTarupod && (locked _ct in [0,1] && !(_podowner in [Epoch_my_GroupUID,_pid])))then{
+				if(_isHuronpod && !(_podowner in [Epoch_my_GroupUID,_pid]) || _isTarupod && (locked _ct < 2 && !(_podowner in [Epoch_my_GroupUID,_pid])))then{
 					if(_claimaction < 0)then{
 						_txt = gettext(configFile >> 'cfgvehicles' >> (typeOf _ct) >> 'displayName');
-						_condition = "player distance _target < 5";
+						_condition = "player distance _target < 5 && locked _target in [0,1]";
 						if(_isHuronpod)then{
-							_condition = "player distance _target < 5 && locked _target in [0,1]";
+							_condition = "player distance _target < 5";
 						};
 						_claimaction = _ct addAction [format["<img size='1.5'image='\a3\Ui_f\data\map\VehicleIcons\iconmanmedic_ca.paa'/> <t color='#0096ff'>Claim %1</t>",_txt],
 						{
@@ -260,7 +260,7 @@ if(hasInterface && !isDedicated)then{
 							_obj setVariable ["HALV_PODOWNER",_newowner,true];
 							HALVPV_SAVEPOD = [player,_obj];
 							publicVariableServer "HALVPV_SAVEPOD";
-						}, "",1, true, true, "",_condition];
+						}, "",1, true, true, "Gear",_condition];
 					};
 				}else{
 					_ct removeAction _claimaction;
