@@ -31,7 +31,7 @@ if(isServer)exitWith{
 		HALV_fnc_savepod = {
 			_player = _this select 0;
 			_pod = _this select 1;
-				if (!(isNull _pod) && !(isNull _player)then{
+				if (!(isNull _pod) && !(isNull _player))then{
 					if(_pod isKindOf 'Pod_Heli_Transport_04_base_F')then{
 					if((getPosATL _pod)select 2 > 3)then{
 						waitUntil{_pod getVariable ['HALV_PODDOWN',0] != 0};
