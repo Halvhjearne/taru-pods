@@ -20,8 +20,7 @@
 */
 
 if(isServer)exitWith{
-//	compileFinal "
-		HALV_fnc_parapod = {
+		HALV_fnc_parapod = compileFinal "
 			_player = _this select 0;
 			_para = _this select 1;
 			if(!isNull _player && !isNull _para)then{
@@ -29,8 +28,8 @@ if(isServer)exitWith{
 					_para call EPOCH_server_setVToken;
 				};
 			};
-		};
-		HALV_fnc_savepod = {
+		";
+		HALV_fnc_savepod = compileFinal "
 			_player = _this select 0;
 			_pod = _this select 1;
 			if (!isNull _pod && !isNull _player)then{
@@ -42,10 +41,8 @@ if(isServer)exitWith{
 					_pod call EPOCH_server_save_vehicle;
 				};
 			};
-		};
-		'HALVPV_PARAPOD' addPublicVariableEventHandler {(_this select 1) call HALV_fnc_parapod};
-		'HALVPV_SAVEPOD' addPublicVariableEventHandler {(_this select 1) spawn HALV_fnc_savepod};
-//	";
+		";
+		'HALVPV_PARAPOD' addPublicVariableEventHandler {if((_this select 1)select 0)then{((_this select 1)select 1) call HALV_fnc_parapod;}else{((_this select 1)select 1) spawn HALV_fnc_savepod;};};
 };
 
 if(hasInterface && !isDedicated)then{
@@ -122,12 +119,12 @@ if(hasInterface && !isDedicated)then{
 		_pos = getPosATL _pod;
 		sleep 2;
 		_pod enableCollisionWith _heli;
-		HALVPV_SAVEPOD = [player,_pod];
-		publicVariableServer "HALVPV_SAVEPOD";
+		HALVPV_PARAPOD = [true,[player,_pod]];
+		publicVariableServer "HALVPV_PARAPOD";
 		if(_pos select 2 > 25)then{
 			_pos = getPosATL _pod;
 			_chute = createVehicle ["B_Parachute_02_F", _pos, [], 0, "CAN_COLLIDE"];
-			HALVPV_PARAPOD = [player,_chute];
+			HALVPV_PARAPOD = [false,[player,_chute]];
 			publicVariableServer "HALVPV_PARAPOD";
 			_chute disableCollisionWith _pod;
 			_chute disableCollisionWith _heli;
@@ -258,8 +255,8 @@ if(hasInterface && !isDedicated)then{
 								_newowner = Epoch_my_GroupUID;
 							};
 							_obj setVariable ["HALV_PODOWNER",_newowner,true];
-							HALVPV_SAVEPOD = [player,_obj];
-							publicVariableServer "HALVPV_SAVEPOD";
+							HALVPV_PARAPOD = [true,[player,_obj]];
+							publicVariableServer "HALVPV_PARAPOD";
 						}, "",1, true, true, "Gear",_condition];
 					};
 				}else{
